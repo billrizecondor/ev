@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Bus-to-Grid for Berlin · Billriz Condor</title>
   <meta name="description" content="Interactive techno-economic model for upgrading Berlin's BVG e-bus depots to bidirectional (vehicle-to-grid) charging.">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%231f5f4a'/><text x='16' y='22' font-family='Georgia,serif' font-size='17' font-weight='700' fill='%23f4efe4' text-anchor='middle'>BC</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230b1f3a'/><text x='16' y='21' font-family='Arial,sans-serif' font-size='13' font-weight='700' fill='%23ffffff' text-anchor='middle'>BC</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/demo.css">
   <style>
     .day { margin-top: 16px; }
@@ -21,7 +21,7 @@
     .day .ticks span:nth-child(odd) { visibility: hidden; }
     @media (min-width: 700px) { .day .ticks span:nth-child(odd) { visibility: visible; } }
     .compare { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 16px; }
-    .compare .col { border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+    .compare .col { border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; }
     .compare .col h4 { margin: 0 0 8px; font-size: 14px; color: var(--muted); font-weight: 600; }
     .compare .big { font-size: 34px; font-weight: 600; letter-spacing: -.02em; }
     .compare .row { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; border-top: 1px solid var(--line); }
@@ -29,7 +29,7 @@
     .matrix td.cell { text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; border: 2px solid var(--surface); border-radius: 6px; }
     .matrix td.cell.on { outline: 2px solid var(--ink); outline-offset: -2px; }
     .phases { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; counter-reset: ph; }
-    .phase { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+    .phase { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 18px; }
     .phase::before { counter-increment: ph; content: "Phase " counter(ph); font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--warm); }
     .phase b { display: block; margin: 6px 0 4px; font-size: 17px; }
     .phase span { color: var(--muted); font-size: 14px; }
@@ -47,7 +47,7 @@
   </header>
 
   <main>
-    <div class="wrap hero">
+    <div class="hero-band"><div class="wrap hero">
       <p class="eyebrow">Vehicle-to-grid · techno-economic analysis</p>
       <h1>Should Berlin's e-buses power the grid?</h1>
       <p class="lede">Berlin's operator BVG is electrifying its bus fleet and has to build depot chargers anyway. This proposal asks whether it should pay extra for <b>bidirectional</b> chargers, so parked buses can charge when power is cheap and sell energy back at evening peaks (Bus-to-Grid).</p>
@@ -57,7 +57,7 @@
         <a class="btn" href="https://github.com/billrizecondor/ev/blob/main/Final%20Technical%20Proposal%20for%20Vehicle-to-Grid%20Integration%20of%20Berlin%C2%B4s%20Electric%20Bus%20Fleet%20(1).pdf">Read the proposal (PDF)</a>
         <a class="btn" href="#code">See the code</a>
       </div>
-    </div>
+    </div></div>
 
     <div class="wrap"><div class="stats" id="heroStats"></div></div>
 
@@ -218,7 +218,7 @@
         plugins: { tooltip: { callbacks: { label: (c) => ` ${fmt.int(c.raw)} e-buses` } } },
       },
       plugins: [{ id: 'capLabels', afterDatasetsDraw(ch) {
-        const { ctx } = ch; ctx.save(); ctx.font = '600 12px Inter, system-ui, sans-serif'; ctx.fillStyle = css('--ink'); ctx.textAlign = 'center';
+        const { ctx } = ch; ctx.save(); ctx.font = '600 12px "IBM Plex Sans", system-ui, sans-serif'; ctx.fillStyle = css('--ink'); ctx.textAlign = 'center';
         ch.getDatasetMeta(0).data.forEach((b, i) => { if (i === 0 || years[i - 1] && m.fleet_by_year[years[i - 1]] !== m.fleet_by_year[years[i]]) ctx.fillText(fmt.int(ch.data.datasets[0].data[i]), b.x, b.y - 6); });
         ctx.restore();
       } }],
@@ -260,7 +260,7 @@
           plugins: { tooltip: { callbacks: { label: (c) => ` €${fmt.dec(c.raw)}M · ${fmt.pct(c.raw * 1e6 / opexTotal)} of OPEX` } } },
         },
         plugins: [{ id: 'endLabels', afterDatasetsDraw(ch) {
-          const { ctx } = ch; ctx.save(); ctx.font = '600 12px Inter, system-ui, sans-serif'; ctx.fillStyle = css('--ink'); ctx.textBaseline = 'middle';
+          const { ctx } = ch; ctx.save(); ctx.font = '600 12px "IBM Plex Sans", system-ui, sans-serif'; ctx.fillStyle = css('--ink'); ctx.textBaseline = 'middle';
           ch.getDatasetMeta(0).data.forEach((b, i) => ctx.fillText('€' + fmt.dec(ch.data.datasets[0].data[i]) + 'M', b.x + 6, b.y));
           ctx.restore();
         } }],
