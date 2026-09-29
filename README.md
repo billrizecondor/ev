@@ -1,22 +1,46 @@
 # Vehicle-to-Grid Integration of Berlin's Electric Bus Fleet
 
-A technical and financial proposal that asks whether a BVG electric bus depot in Berlin should upgrade its planned charging infrastructure to **bidirectional (Bus-to-Grid, B2G)** charging.
+A technical and financial proposal that asks whether a BVG electric bus depot in Berlin should upgrade its planned chargers to **bidirectional (Bus-to-Grid, B2G)** charging.
+
+🌐 **Live demo:** https://billrizecondor.github.io/ev/ · 📄 [Full proposal (PDF)](<Final Technical Proposal for Vehicle-to-Grid Integration of Berlin´s Electric Bus Fleet (1).pdf>)
 
 **Team:** Billriz Condor, Carlos Andrés Villamar Martínez, Kien Long van Ho. Supervised by Bence Bróní Bereczk.
 
-📄 Full proposal: [Technical Proposal (PDF)](<Final Technical Proposal for Vehicle-to-Grid Integration of Berlin´s Electric Bus Fleet (1).pdf>)
+## Key results (2025–2030)
 
-## Key findings
+| | Unidirectional | Bidirectional (B2G) |
+|---|---:|---:|
+| CAPEX (1,023 new e-buses + charging stations) | €699.2M | €740.1M |
+| Discharging revenue | – | €29.2–58.5M |
+| Benefit in OPEX* | 16–21% | 22–33% |
 
-- Revenue from energy arbitrage alone does **not** cover the full cost of bidirectional chargers. That is expected for a public transport operator that isn't run for profit.
-- A bidirectional charger costs **about 30% more** than a unidirectional one. That extra cost is modest next to the depot electrification investment, which is already mandated.
-- Seen from the municipality's and the grid's point of view, B2G enables smart charging, peak shaving and controlled discharging, which gives it strategic value.
+\*Charging savings plus discharging revenue, as a share of baseline OPEX (€481.8M).
+
+- Revenue from energy arbitrage alone does **not** cover bidirectional chargers. That's expected for a public operator that isn't run for profit.
+- Bidirectional chargers cost **30% more per kW**, only about **€41M (+6%)** on top of an electrification programme that is already mandated.
+- B2G adds system value: peak shaving, deferred grid upgrades, and up to about **101 t CO₂ a day** avoided by replacing fossil peaker plants.
+
+## Live demo
+
+The [interactive demo](https://billrizecondor.github.io/ev/) includes:
+- a 24-hour depot timeline showing when buses charge, discharge and are on the road
+- fleet roll-out, CAPEX and OPEX charts
+- a scenario explorer with sliders for charging price and the share of the fleet discharging
+- the full sensitivity matrix from the report
+- the financial model code, loaded directly from this repo
+
+## Code
+
+`analysis/b2g_financial_model.py` rebuilds the CAPEX and bus O&M figures from the proposal's assumptions (fleet roll-out, €550k per bus, €350 vs. €455 per kW chargers, 15% O&M). It then runs the charging-price × discharge-availability scenarios and writes `docs/data/b2g_model.json`.
+
+```bash
+python analysis/b2g_financial_model.py
+```
 
 ## Scope of the analysis
 
-- Bus capacities (Ebusco 2.2, Solaris Urbino 18) and schedule analysis
-- Berlin electricity demand profiles in summer and winter
+- Bus capacities (Ebusco 2.2, Solaris Urbino 18) and depot schedules
+- Berlin electricity demand profiles, summer and winter
 - Technical, environmental and economic impact assessment
-- CAPEX and OPEX for 2025–2030, unidirectional vs. bidirectional
-- OPEX and revenue sensitivity analysis
-- Business model canvas, risk analysis, and a roadmap with the final recommendation
+- CAPEX/OPEX, revenue model and sensitivity analysis
+- Business model canvas, risk analysis, and a roadmap from pilot to full grid integration

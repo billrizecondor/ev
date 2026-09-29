@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bus-to-Grid for Berlin · Billriz Condor</title>
+  <meta name="description" content="Interactive techno-economic model for upgrading Berlin's BVG e-bus depots to bidirectional (vehicle-to-grid) charging.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%231f5f4a'/><text x='16' y='22' font-family='Georgia,serif' font-size='17' font-weight='700' fill='%23f4efe4' text-anchor='middle'>BC</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/demo.css">
+  <style>
+    .day { margin-top: 16px; }
+    .day .track { display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; }
+    .day .hour { height: 44px; border-radius: 3px; background: var(--grid); position: relative; }
+    .day .hour.charge { background: var(--s1); }
+    .day .hour.discharge { background: var(--s2); }
+    .day .hour.road { background: color-mix(in srgb, var(--faint) 45%, var(--surface)); }
+    .day .ticks { display: grid; grid-template-columns: repeat(24, 1fr); font-size: 11px; color: var(--muted); margin-top: 4px; }
+    .day .ticks span:nth-child(odd) { visibility: hidden; }
+    @media (min-width: 700px) { .day .ticks span:nth-child(odd) { visibility: visible; } }
+    .compare { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 16px; }
+    .compare .col { border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+    .compare .col h4 { margin: 0 0 8px; font-size: 14px; color: var(--muted); font-weight: 600; }
+    .compare .big { font-size: 34px; font-weight: 600; letter-spacing: -.02em; }
+    .compare .row { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; border-top: 1px solid var(--line); }
+    .compare .row span:last-child { font-variant-numeric: tabular-nums; font-weight: 500; }
+    .matrix td.cell { text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; border: 2px solid var(--surface); border-radius: 6px; }
+    .matrix td.cell.on { outline: 2px solid var(--ink); outline-offset: -2px; }
+    .phases { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; counter-reset: ph; }
+    .phase { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+    .phase::before { counter-increment: ph; content: "Phase " counter(ph); font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--warm); }
+    .phase b { display: block; margin: 6px 0 4px; font-size: 17px; }
+    .phase span { color: var(--muted); font-size: 14px; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap">
+      <a href="https://billrizecondor.github.io/">← Billriz Condor · Portfolio</a>
+      <div class="right">
+        <a class="hide-sm" href="https://github.com/billrizecondor/ev">Source on GitHub</a>
+        <button class="theme-btn" type="button" aria-label="Toggle dark mode">◐</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap hero">
+      <p class="eyebrow">Vehicle-to-grid · techno-economic analysis</p>
+      <h1>Should Berlin's e-buses power the grid?</h1>
+      <p class="lede">Berlin's operator BVG is electrifying its bus fleet and has to build depot chargers anyway. This proposal asks whether it should pay extra for <b>bidirectional</b> chargers, so parked buses can charge when power is cheap and sell energy back at evening peaks (Bus-to-Grid).</p>
+      <div class="meta"><span><b>Team</b> Billriz Condor, Carlos Andrés Villamar Martínez, Kien Long van Ho</span><span><b>Supervisor</b> Bence Bróní Bereczk</span></div>
+      <div class="btns">
+        <a class="btn primary" href="#explorer">Run the scenarios</a>
+        <a class="btn" href="https://github.com/billrizecondor/ev/blob/main/Final%20Technical%20Proposal%20for%20Vehicle-to-Grid%20Integration%20of%20Berlin%C2%B4s%20Electric%20Bus%20Fleet%20(1).pdf">Read the proposal (PDF)</a>
+        <a class="btn" href="#code">See the code</a>
+      </div>
+    </div>
+
+    <div class="wrap"><div class="stats" id="heroStats"></div></div>
+
+    <section>
+      <div class="wrap">
+        <div class="sec-head"><h2>A day at the depot</h2><p>Most buses leave between 05:00 and 08:00 and return between 16:00 and midnight. That leaves a cheap night-charging window and a pool of parked buses during the morning and evening price peaks.</p></div>
+        <div class="card">
+          <div class="legend">
+            <span><i style="background:var(--s1)"></i>Charging window, 00:00–05:00 · 50% of the fleet</span>
+            <span><i style="background:var(--s2)"></i>Discharging at peaks, 06:00–09:00 and 16:00–21:00 · 15–30% of the fleet</span>
+            <span><i style="background:color-mix(in srgb, var(--faint) 45%, var(--surface))"></i>Most buses on the road</span>
+          </div>
+          <div class="day"><div class="track" id="track"></div><div class="ticks" id="ticks"></div></div>
+          <p class="note" style="margin-top:12px">Day-ahead prices in Germany range from about €20–50/MWh in low-demand hours to €150–200/MWh at peaks (SMARD, 2025). The model assumes charging at €10–30/MWh in the optimised window and selling at €150/MWh.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <div class="grid2">
+          <div class="card">
+            <h3>E-bus fleet roll-out</h3>
+            <p class="note">Battery-electric buses in service (BVG targets)</p>
+            <div class="chart-box short"><canvas id="fleetChart" aria-label="Column chart of fleet size by year"></canvas></div>
+          </div>
+          <div class="card">
+            <h3>Investment 2025–2030</h3>
+            <p class="note">CAPEX in millions of euros</p>
+            <div class="legend" id="capexLegend"></div>
+            <div class="chart-box short"><canvas id="capexChart" aria-label="Stacked bar chart of CAPEX for unidirectional and bidirectional charging"></canvas></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:18px">
+          <h3>Baseline operating costs 2025–2030</h3>
+          <p class="note">OPEX before any smart charging, in millions of euros (charging at €90/MWh)</p>
+          <div class="chart-box short"><canvas id="opexChart" aria-label="Bar chart of baseline OPEX components"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="explorer">
+      <div class="wrap">
+        <div class="sec-head"><h2>Scenario explorer</h2><p><b>Benefit in OPEX</b> is savings from cheaper charging, plus discharging revenue in the bidirectional case, as a share of baseline OPEX (€482M). Move the sliders to compare the two charger types.</p></div>
+        <div class="card">
+          <div class="controls">
+            <label class="control">Charging price in the night window <output id="o-price"></output>
+              <input type="range" id="price" min="0" max="90" step="5" value="10"></label>
+            <label class="control">Share of fleet discharging at peaks <output id="o-share"></output>
+              <input type="range" id="share" min="0" max="0.4" step="0.01" value="0.3"></label>
+          </div>
+          <div class="compare" id="compare"></div>
+        </div>
+        <div class="card">
+          <h3>Benefit in OPEX for every scenario in the report</h3>
+          <p class="note">Rows: charging price. Columns: charger type and share of the fleet discharging at peaks. The cell matching the sliders is outlined.</p>
+          <div class="table-wrap matrix" id="matrix"></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <div class="sec-head"><h2>Key findings</h2></div>
+        <div class="findings">
+          <div class="finding"><b>Arbitrage alone doesn't pay back</b><span>Selling energy at peaks can't recover the full cost of bidirectional chargers. That's expected for a public operator that isn't run for profit.</span></div>
+          <div class="finding"><b>A small premium for a big upgrade</b><span>Bidirectional chargers cost 30% more per kW, which adds only about €41M (+6%) to a €699M electrification programme.</span></div>
+          <div class="finding"><b>Benefit rises from 16–21% to 22–33%</b><span>Discharging revenue of €29–58M over 2025–2030 lifts the benefit in OPEX well above what smart charging achieves on its own.</span></div>
+          <div class="finding"><b>Value for the whole grid</b><span>A 1,250-bus fleet could avoid up to about 101 t of CO₂ a day by replacing fossil peaker plants. It can also defer transformer and grid upgrades.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <div class="sec-head"><h2>Roadmap</h2></div>
+        <div class="phases">
+          <div class="phase"><b>Pilot</b><span>One depot with a few bidirectional chargers, run for a full seasonal cycle to test winter and summer loads.</span></div>
+          <div class="phase"><b>Scale-up</b><span>More depots and a growing share of V2G chargers, with automated charge-scheduling software.</span></div>
+          <div class="phase"><b>Grid integration</b><span>Formal grid-support contracts with the grid operator (DSO), locked-in prices, and depots used as planned flexibility assets.</span></div>
+        </div>
+        <div class="card" style="margin-top:18px">
+          <h3>Main risks and mitigation</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Risk</th><th>Mitigation</th></tr></thead>
+              <tbody>
+                <tr><td>Battery degradation</td><td>Battery-life management with proper cycling and charging strategies</td></tr>
+                <tr><td>Charger reliability</td><td>Redundant chargers and spare charging capacity at depots</td></tr>
+                <tr><td>Back-end/cyber vulnerability</td><td>Robust, secure energy-management back end</td></tr>
+                <tr><td>Electricity price volatility</td><td>Long-term price contracts for charging and discharging</td></tr>
+                <tr><td>Technology costs</td><td>Fixed-price contracts for chargers and installation</td></tr>
+                <tr><td>Lagging V2G regulation</td><td>Engage early in policy-making with local and EU regulators</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="code">
+      <div class="wrap">
+        <div class="sec-head"><h2>How it's calculated</h2><p>This Python model rebuilds the CAPEX and bus O&amp;M figures from the proposal's assumptions, then runs the full charging-price × discharge-availability sensitivity matrix. The explorer above uses the same equations.</p></div>
+        <div class="card">
+          <div class="code-head"><code>analysis/b2g_financial_model.py</code><a href="https://github.com/billrizecondor/ev/blob/main/analysis/b2g_financial_model.py">Open on GitHub →</a></div>
+          <div class="code"><pre id="codeView">Loading…</pre></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p>© Billriz Condor, Carlos Andrés Villamar Martínez, Kien Long van Ho · Sources: BVG (2025), SMARD (2025), Jahic et al. (2022), Vollmuth et al. (2024).</p>
+      <p><a href="https://billrizecondor.github.io/">Back to portfolio</a></p>
+    </div>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="assets/demo.js"></script>
+  <script>
+  (async function () {
+    const { chart, fmt, axes, css } = Demo;
+    const m = await (await fetch('data/b2g_model.json')).json();
+    const opexTotal = m.opex.total;
+    const shareA = m.discharge_scenarios.A;
+
+    // Same equations as analysis/b2g_financial_model.py
+    const savings = (price) => m.charging_energy_mwh * (m.baseline_charge_price - price);
+    const revenue = (share) => m.revenue_a_total * share / shareA;
+    const benefit = (price, share, bi) => (savings(price) + (bi ? revenue(share) : 0)) / opexTotal;
+
+    // ---- hero tiles
+    const extra = m.capex.bidirectional.total - m.capex.unidirectional.total;
+    const uniB = Object.values(m.matrix.unidirectional).map((v) => v.benefit);
+    const biB = Object.values(m.matrix.bidirectional).map((v) => v.benefit);
+    document.getElementById('heroStats').innerHTML = [
+      ['E-buses by 2030', '1,250', 'up from 227 in 2025'],
+      ['Extra cost for bidirectional', fmt.eurM(extra), '+' + fmt.pct(extra / m.capex.unidirectional.total) + ' on €699M total CAPEX'],
+      ['Benefit in OPEX', fmt.pct(Math.min(...biB)) + '–' + fmt.pct(Math.max(...biB)), 'bidirectional, vs ' + fmt.pct(Math.min(...uniB)) + '–' + fmt.pct(Math.max(...uniB)) + ' unidirectional'],
+      ['Discharging revenue', '€' + Math.round(revenue(0.15) / 1e6) + '–' + Math.round(revenue(0.30) / 1e6) + 'M', '2025–2030, 15–30% of fleet available'],
+    ].map(([l, v, s]) => `<div class="stat"><div class="label">${l}</div><div class="value">${v}</div><div class="sub">${s}</div></div>`).join('');
+
+    // ---- 24 h depot strip
+    const kind = (h) => (h < 5 ? 'charge' : (h >= 6 && h < 9) || (h >= 16 && h < 21) ? 'discharge' : h >= 9 && h < 16 ? 'road' : '');
+    const label = { charge: 'charging', discharge: 'discharging at peak', road: 'buses on the road', '': 'departures / returns' };
+    document.getElementById('track').innerHTML = Array.from({ length: 24 }, (_, h) => `<div class="hour ${kind(h)}" title="${String(h).padStart(2, '0')}:00 · ${label[kind(h)]}"></div>`).join('');
+    document.getElementById('ticks').innerHTML = Array.from({ length: 24 }, (_, h) => `<span>${String(h).padStart(2, '0')}</span>`).join('');
+
+    // ---- fleet roll-out
+    const years = Object.keys(m.fleet_by_year);
+    chart('fleetChart', ({ series }) => ({
+      type: 'bar',
+      data: { labels: years, datasets: [{ data: years.map((y) => m.fleet_by_year[y]), backgroundColor: series[0], borderRadius: { topLeft: 4, topRight: 4 }, borderSkipped: false, maxBarThickness: 24 }] },
+      options: {
+        layout: { padding: { top: 20 } },
+        scales: axes({ y: { min: 0, ticks: { callback: (v) => fmt.int(v) } } }),
+        plugins: { tooltip: { callbacks: { label: (c) => ` ${fmt.int(c.raw)} e-buses` } } },
+      },
+      plugins: [{ id: 'capLabels', afterDatasetsDraw(ch) {
+        const { ctx } = ch; ctx.save(); ctx.font = '600 12px Inter, system-ui, sans-serif'; ctx.fillStyle = css('--ink'); ctx.textAlign = 'center';
+        ch.getDatasetMeta(0).data.forEach((b, i) => { if (i === 0 || years[i - 1] && m.fleet_by_year[years[i - 1]] !== m.fleet_by_year[years[i]]) ctx.fillText(fmt.int(ch.data.datasets[0].data[i]), b.x, b.y - 6); });
+        ctx.restore();
+      } }],
+    }));
+
+    // ---- CAPEX
+    function drawCapexLegend() {
+      const s = Demo.series();
+      document.getElementById('capexLegend').innerHTML = [['E-bus fleet', s[0]], ['Charging stations', s[1]]].map(([l, c]) => `<span><i style="background:${c}"></i>${l}</span>`).join('');
+    }
+    drawCapexLegend(); document.addEventListener('themechange', drawCapexLegend);
+    chart('capexChart', ({ series }) => {
+      const cases = ['unidirectional', 'bidirectional'];
+      const ds = (lbl, key, color, end) => ({
+        label: lbl, data: cases.map((c) => m.capex[c][key] / 1e6), backgroundColor: color, maxBarThickness: 24,
+        borderColor: css('--surface'), borderWidth: { right: 2, left: 0, top: 0, bottom: 0 }, borderSkipped: false,
+        borderRadius: end ? { topRight: 4, bottomRight: 4 } : 0,
+      });
+      return {
+        type: 'bar',
+        data: { labels: ['Unidirectional', 'Bidirectional'], datasets: [ds('E-bus fleet', 'fleet', series[0], false), ds('Charging stations', 'stations', series[1], true)] },
+        options: {
+          indexAxis: 'y',
+          scales: axes({ x: { stacked: true, min: 0, grid: { color: css('--grid'), drawTicks: false }, border: { display: false }, ticks: { maxTicksLimit: 5, callback: (v) => '€' + v + 'M' } }, y: { stacked: true, grid: { display: false }, border: { color: css('--line') } } }),
+          plugins: { tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: €${fmt.dec(c.raw)}M`, footer: (it) => 'Total: €' + fmt.dec(it.reduce((a, b) => a + b.raw, 0)) + 'M' } } },
+        },
+      };
+    });
+
+    // ---- OPEX baseline
+    chart('opexChart', ({ series }) => {
+      const items = [['E-bus O&M', m.opex.bus_om], ['Charging electricity', m.opex.charging], ['Charging-station O&M', m.opex.stations_om]];
+      return {
+        type: 'bar',
+        data: { labels: items.map((i) => i[0]), datasets: [{ data: items.map((i) => i[1] / 1e6), backgroundColor: series[0], borderRadius: { topRight: 4, bottomRight: 4 }, borderSkipped: false, maxBarThickness: 24 }] },
+        options: {
+          indexAxis: 'y', layout: { padding: { right: 64 } },
+          scales: axes({ x: { min: 0, grid: { color: css('--grid'), drawTicks: false }, border: { display: false }, ticks: { callback: (v) => '€' + v + 'M' } }, y: { grid: { display: false }, border: { color: css('--line') } } }),
+          plugins: { tooltip: { callbacks: { label: (c) => ` €${fmt.dec(c.raw)}M · ${fmt.pct(c.raw * 1e6 / opexTotal)} of OPEX` } } },
+        },
+        plugins: [{ id: 'endLabels', afterDatasetsDraw(ch) {
+          const { ctx } = ch; ctx.save(); ctx.font = '600 12px Inter, system-ui, sans-serif'; ctx.fillStyle = css('--ink'); ctx.textBaseline = 'middle';
+          ch.getDatasetMeta(0).data.forEach((b, i) => ctx.fillText('€' + fmt.dec(ch.data.datasets[0].data[i]) + 'M', b.x + 6, b.y));
+          ctx.restore();
+        } }],
+      };
+    });
+
+    // ---- scenario explorer
+    const price = document.getElementById('price'), share = document.getElementById('share');
+    function col(title, bi) {
+      const p = +price.value, s = +share.value;
+      const rows = [['Charging savings', fmt.eurM(savings(p))], ['Discharging revenue', bi ? fmt.eurM(revenue(s)) : '–'], ['Extra CAPEX vs unidirectional', bi ? fmt.eurM(extra) : '–']];
+      return `<div class="col"><h4>${title}</h4><div class="big">${fmt.pct(benefit(p, s, bi))}</div><div class="note" style="margin:0 0 8px">benefit in OPEX</div>${rows.map(([a, b]) => `<div class="row"><span>${a}</span><span>${b}</span></div>`).join('')}</div>`;
+    }
+    function heat(v) {
+      const lo = 0.1, hi = 0.35, t = Math.max(0, Math.min(1, (v - lo) / (hi - lo)));
+      const pct = Math.round(t * 100);
+      return { bg: `color-mix(in srgb, ${css('--seq-hi')} ${pct}%, ${css('--seq-lo')})`, fg: pct > 55 ? (document.documentElement.dataset.theme === 'dark' || (!document.documentElement.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches) ? '#0b0b0b' : '#ffffff') : css('--ink') };
+    }
+    function drawMatrix() {
+      const p = +price.value, s = +share.value;
+      const ds = m.discharge_scenarios, cs = m.charge_scenarios;
+      const cell = (v, on) => { const h = heat(v); return `<td class="cell${on ? ' on' : ''}" style="background:${h.bg};color:${h.fg}">${fmt.pct(v)}</td>`; };
+      document.getElementById('matrix').innerHTML = `<table><thead><tr><th>Charging price</th><th class="num" style="text-align:center">Unidirectional</th>${Object.entries(ds).map(([k, v]) => `<th class="num" style="text-align:center">Bidirectional ${k} · ${fmt.pct(v)}</th>`).join('')}</tr></thead><tbody>` +
+        Object.entries(cs).map(([k, pr]) => `<tr><td>Scenario ${k} · €${pr}/MWh</td>${cell(m.matrix.unidirectional[k].benefit, pr === p && s === 0)}${Object.entries(ds).map(([d, sh]) => cell(m.matrix.bidirectional[k + d].benefit, pr === p && Math.abs(sh - s) < 1e-9)).join('')}</tr>`).join('') + '</tbody></table>';
+    }
+    function refresh() {
+      document.getElementById('o-price').textContent = '€' + price.value + '/MWh' + (+price.value === 90 ? ' (baseline)' : '');
+      document.getElementById('o-share').textContent = fmt.pct(+share.value);
+      document.getElementById('compare').innerHTML = col('Unidirectional chargers', false) + col('Bidirectional chargers (B2G)', true);
+      drawMatrix();
+    }
+    [price, share].forEach((el) => el.addEventListener('input', refresh));
+    document.addEventListener('themechange', drawMatrix);
+    refresh();
+
+    Demo.loadCode('codeView', 'ev', 'analysis/b2g_financial_model.py');
+  })();
+  </script>
+</body>
+</html>
